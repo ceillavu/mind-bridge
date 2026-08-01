@@ -32,31 +32,39 @@ Tuesday?" Crucial clinical trends are lost to human memory gaps.
 evaluations, causing mild cognitive changes to go unnoticed until later stages. 
 
 3. How MindBridge Solves It 
+
 • Unstructured Input $\rightarrow$ Practical Guidance: Caregivers log notes 
 naturally (e.g., "Mum kept asking where dad was today..."). MindBridge offers 
 instant redirection advice rather than medical jargon. 
+
 • Silent Telemetry Tracking: The system logs severity data in the background to 
 plot clear 14-day trend graphs. 
+
 • 1-Page Doctor Digest: Before a clinical visit, tapping "Prepare Summary for 
 Doctor" converts weeks of journal entries into a 30-second structured summary 
 for the physician. 
 
 4. Strategic Advantage (Regulatory & Business Model) 
+
 • Low Regulatory Friction: Positioned strictly as a conversational screening 
 support tool, not a diagnostic medical device. This avoids multi-year SaMD/FDA 
 delays while protecting against diagnostic liability. 
+
 • Expanded Target Audience: Reaches both active caregivers and proactive 
 adults aged 55+ ("worried well"). 
+
 • Dual Revenue Model: 
-  o B2C Freemium: Free daily tracking + $\$9.99/\text{month}$ premium for 
+  A. B2C Freemium: Free daily tracking + $\$9.99/\text{month}$ premium for 
   PDF exports and multi-caregiver sync. 
-  o B2B2C Partnerships: Memory clinics, eldercare networks, and health 
+  B. B2B2C Partnerships: Memory clinics, eldercare networks, and health 
   insurers seeking to reduce long-term care costs. 
 
 5. Immediate Operational Goals 
+
 • Launch and optimize the web-based caregiver application and Progressive Web 
 App (PWA) for immediate, zero-friction access across desktop, tablet, and 
 mobile browsers. 
+
 • Initiate web-based clinical feasibility pilots with memory care and senior care 
 partners. 
 • Onboard the first 5,000 active caregiver families through targeted web marketing 
