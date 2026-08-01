@@ -19,6 +19,7 @@ of attention, memory, fluency, clock drawing and memory recall) for proactive ad
 less than 60 and family members seeking a personal baseline and medical attention.
 
 2. Why We Are Doing It (The Problem & Purpose)
+
 • Caregiver Burnout: Every 3 seconds, someone develops dementia. Family 
 members endure 14-hour days of confusion and stress without immediate 
 support. 
