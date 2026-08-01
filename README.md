@@ -8,6 +8,7 @@ designed to bridge the gap between daily home care and brief clinical neurology
 appointments. 
 
 It combines two complementary tools within a single interface: 
+
 •Caregiver Companion: A natural daily voice/text journal that provides real-time 
 empathetic coaching for caregivers while silently transforming free-form notes 
 into structured clinical telemetry (tracking memory, mood, appetite, and evening 
