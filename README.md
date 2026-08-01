@@ -22,9 +22,11 @@ frameworks like 3-word recall and digital clock drawing) for proactive adults ag
 members endure 14-hour days of confusion and stress without immediate 
 support. 
 
+
 • The 15-Minute Clinical Gap: When families finally sit down with a doctor, they 
 face panic: "What happened two weeks ago? Was the confusion worse on 
 Tuesday?" Crucial clinical trends are lost to human memory gaps. 
+
 
 • Hesitation Around Screening: Proactive adults often fear formal hospital 
 evaluations, causing mild cognitive changes to go unnoticed until later stages. 
