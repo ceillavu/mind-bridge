@@ -59,3 +59,5 @@ mobile browsers.
 partners. 
 • Onboard the first 5,000 active caregiver families through targeted web marketing 
 and partner referral portals.
+
+**MindBridge Check is a non-invasive self-screening tool designed strictly to track personal baseline trends over time and support informed conversations with healthcare professionals. It does not constitute a clinical diagnosis.**
