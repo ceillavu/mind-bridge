@@ -8,12 +8,12 @@ designed to bridge the gap between daily home care and brief clinical neurology
 appointments. 
 
 It combines two complementary tools within a single interface: 
-1. Caregiver Companion: A natural daily voice/text journal that provides real-time 
+•Caregiver Companion: A natural daily voice/text journal that provides real-time 
 empathetic coaching for caregivers while silently transforming free-form notes 
 into structured clinical telemetry (tracking memory, mood, appetite, and evening 
 confusion over time). 
 
-2. MindBridge Check: A gentle, 5 to 10 minute self-screening module (utilizing
+• MindBridge Check: A gentle, 5 to 10 minute self-screening module (utilizing
 Mini-Addenbrooke’s Cognitive Examination, M-ACE frameworks that includes aspects
 of attention, memory, fluency, clock drawing and memory recall) for proactive adults aged 
 less than 60 and family members seeking a personal baseline and medical attention.
