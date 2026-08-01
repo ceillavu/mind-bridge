@@ -13,9 +13,10 @@ empathetic coaching for caregivers while silently transforming free-form notes
 into structured clinical telemetry (tracking memory, mood, appetite, and evening 
 confusion over time). 
 
-2. MindBridge Check: A gentle, 3-minute self-screening module (utilizing Mini-Cog 
-frameworks like 3-word recall and digital clock drawing) for proactive adults aged 
-55+ and family members seeking a personal baseline. 
+2. MindBridge Check: A gentle, 5 to 10 minute self-screening module (utilizing
+Mini-Addenbrooke’s Cognitive Examination, M-ACE frameworks that includes aspects
+of attention, memory, fluency, clock drawing and memory recall) for proactive adults aged 
+less than 60 and family members seeking a personal baseline and medical attention.
 
 2. Why We Are Doing It (The Problem & Purpose)
 • Caregiver Burnout: Every 3 seconds, someone develops dementia. Family 
