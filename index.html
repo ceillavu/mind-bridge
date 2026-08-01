@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindBridge — Caregiver Companion &amp; Cognitive Check</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        forest: {
+                            50: '#f2f7f5',
+                            100: '#e1ede8',
+                            200: '#c5dcd3',
+                            300: '#9ec2b4',
+                            400: '#73a291',
+                            500: '#568776',
+                            600: '#436d5f',
+                            700: '#38584e',
+                            800: '#2f4941',
+                            900: '#2a3e38',
+                            950: '#152320',
+                        },
+                        paper: {
+                            50: '#fcfbf9',
+                            100: '#f7f4ee',
+                            200: '#efe9dd',
+                            300: '#e3d7c3',
+                            400: '#d1bf9f',
+                        },
+                        peach: {
+                            100: '#ffedd5',
+                            200: '#fed7aa',
+                            300: '#fdba74',
+                            400: '#fb923c',
+                            500: '#f97316',
+                            600: '#ea580c',
+                        },
+                        roseflag: {
+                            100: '#ffe4e6',
+                            700: '#be123c',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        serifWarm: ['Georgia', 'Cambria', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PDF generation (Download PDF button) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Custom Aesthetics -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f4ee;
+            color: #1e293b;
+        }
+
+        .font-serif-warm {
+            font-family: 'Georgia', serif;
+        }
+
+        .paper-card {
+            background-color: #ffffff;
+            border: 1px solid #efe9dd;
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 20px -2px rgba(42, 62, 56, 0.05);
+        }
+
+        .fade-enter {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f7f4ee;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 12mm;
+            }
+
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                font-size: 11pt;
+            }
+
+            /* Freeze all animations at their final state so nothing prints invisible/blank */
+            * {
+                animation: none !important;
+                transition: none !important;
+                opacity: 1 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Hide non-printable app UI elements (appShell wraps the whole dashboard & forces a blank first page) */
+            #screenLanding, #screenAuth, #appShell, nav, #moduleCaregiver, #moduleCheckin, 
+            #policyModal, #profileModal, #patientModal, .no-print,
+            #doctorSummaryModal > div > div:first-child, /* Hide modal header */
+            #doctorSummaryModal > div > div:last-child   /* Hide modal footer buttons */
+            {
+                display: none !important;
+            }
+            
+            #doctorSummaryModal {
+                position: static !important;
+                background: transparent !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                display: block !important;
+                overflow: visible !important;
+            }
+
+            #doctorSummaryModal > div {
+                max-width: 100% !important;
+                max-height: none !important;
+                height: auto !important;
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                display: block !important;
+            }
+
+            #summaryModalScrollable {
+                overflow: visible !important;
+                max-height: none !important;
+                height: auto !important;
+                padding: 0 !important;
+            }
+
+            .print-document-container {
+                display: block !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .print-page-break {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col antialiased selection:bg-forest-100 selection:text-forest-900">
+
+    <!-- ===================== SCREEN 1: LANDING SCREEN ===================== -->
+    <div id="screenLanding" class="min-h-screen flex flex-col justify-between p-4 sm:p-8 max-w-5xl mx-auto w-full fade-enter">
+        
+        <!-- Header Brand -->
+        <header class="flex items-center justify-between py-4">
+            <div class="flex items-center gap-3">
+                <!-- SVG LOGO -->
+                <svg class="h-10 w-auto" viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="140" cy="18" r="4" fill="#f97316"/>
+                    <path d="M100 42 C120 22, 160 22, 180 42" stroke="#f97316" stroke-width="5" stroke-linecap="round" fill="none"/>
+                    <circle cx="100" cy="42" r="5" fill="#58483e"/>
+                    <circle cx="180" cy="42" r="5" fill="#88a48b"/>
+                    <text x="18" y="70" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="#58483e">Mind</text>
+                    <text x="108" y="70" font-family="Arial, sans-serif" font-weight="600" font-size="34" fill="#88a48b">Bridge</text>
+                </svg>
+            </div>
+        </header>
+
+        <!-- Main Hero content -->
+        <main class="my-auto py-8 space-y-10">
+            <div class="text-center max-w-2xl mx-auto space-y-4">
+                <span class="bg-forest-100 text-forest-900 text-xs font-semibold px-3.5 py-1.5 rounded-full border border-forest-200 inline-flex items-center gap-1.5">
+                    <i class="fa-solid fa-heart-pulse text-forest-700"></i> Empowering Caregivers &amp; Families
+                </span>
+                <h1 class="text-3xl sm:text-5xl font-serif-warm font-bold text-slate-900 leading-tight">
+                    Bridging daily caregiving with intelligent cognitive insights.
+                </h1>
+                <p class="text-sm sm:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
+                    MindBridge enables families to log daily observations effortlessly and run quick validated cognitive baseline checks to support timely medical conversations.
+                </p>
+            </div>
+
+            <!-- Two Main Service Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+                <!-- Caregiver Card -->
+                <button type="button" onclick="window.showAuth('signup', 'caregiver')" class="paper-card p-6 text-left hover:border-forest-400 hover:shadow-lg transition-all duration-200 group cursor-pointer flex flex-col justify-between space-y-4">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-peach-100 text-peach-600 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-hand-holding-heart"></i>
+                        </div>
+                        <h3 class="text-lg font-serif-warm font-bold text-slate-900 group-hover:text-forest-800 transition">
+                            MindBridge Caregiver
+                        </h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            Write quick daily notes — AI records observations, provides caregiver guidance, and tracks mood &amp; memory trends over time.
+                        </p>
+                    </div>
+                    <div class="text-xs font-semibold text-forest-800 flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                        <span>Get Started with Caregiver</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </div>
+                </button>
+
+                <!-- Screening Card -->
+                <button type="button" onclick="window.showAuth('signup', 'checkin')" class="paper-card p-6 text-left hover:border-teal-400 hover:shadow-lg transition-all duration-200 group cursor-pointer flex flex-col justify-between space-y-4">
+                    <div class="space-y-3">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-100 text-teal-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <h3 class="text-lg font-serif-warm font-bold text-slate-900 group-hover:text-teal-800 transition">
+                            MindBridge Check
+                        </h3>
+                        <p class="text-xs text-slate-600 leading-relaxed">
+                            A short, validated M-ACE 30-point cognitive check to record baselines over time — a self-screening tool, never a diagnosis.
+                        </p>
+                    </div>
+                    <div class="text-xs font-semibold text-teal-800 flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+                        <span>Try MindBridge Check</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Single Demo Access Action -->
+            <div class="text-center pt-2">
+                <button type="button" onclick="window.continueAsGuest()" class="bg-forest-800 hover:bg-forest-900 active:scale-95 text-white font-medium text-sm px-8 py-3.5 rounded-full shadow-lg transition-all cursor-pointer inline-flex items-center gap-2">
+                    <i class="fa-solid fa-bolt text-peach-300"></i>
+                    <span>Continue as Guest (Instant Demo Access)</span>
+                </button>
+            </div>
+        </main>
+
+        <footer class="py-4 text-center text-xs text-slate-500 border-t border-paper-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>© 2026 MindBridge. Hackathon Prototype for Digital Health.</p>
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="window.openPolicyModal(event, 'caregiver')" class="underline hover:text-slate-800 cursor-pointer">
+                    Caregiver Terms
+                </button>
+                <span>•</span>
+                <button type="button" onclick="window.openPolicyModal(event, 'check')" class="underline hover:text-slate-800 cursor-pointer">
+                    Check Screening Terms
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ===================== SCREEN 2: AUTH MODAL / SCREEN ===================== -->
+    <div id="screenAuth" class="min-h-screen hidden flex items-center justify-center p-4 fade-enter">
+        <div class="paper-card max-w-md w-full p-6 sm:p-8 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="flex justify-center mb-2">
+                    <svg class="h-10 w-auto" viewBox="0 0 280 80" fill="none">
+                        <circle cx="140" cy="18" r="4" fill="#f97316"/>
+                        <path d="M100 42 C120 22, 160 22, 180 42" stroke="#f97316" stroke-width="5" stroke-linecap="round" fill="none"/>
+                        <circle cx="100" cy="42" r="5" fill="#58483e"/>
+                        <circle cx="180" cy="42" r="5" fill="#88a48b"/>
+                        <text x="18" y="70" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="#58483e">Mind</text>
+                        <text x="108" y="70" font-family="Arial, sans-serif" font-weight="600" font-size="34" fill="#88a48b">Bridge</text>
+                    </svg>
+                </div>
+                <h2 class="text-xl font-serif-warm font-bold text-slate-900" id="authTitle">Welcome to MindBridge</h2>
+                <p class="text-xs text-slate-500">Sign in or create an account to store notes &amp; screening baselines.</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="bg-paper-100 p-1 rounded-xl flex gap-1 border border-paper-200 text-xs font-semibold">
+                <button type="button" id="authTabSignup" onclick="window.setAuthMode('signup')" class="flex-1 py-2 rounded-lg text-center transition cursor-pointer bg-white text-slate-900 shadow-sm">Sign up</button>
+                <button type="button" id="authTabLogin" onclick="window.setAuthMode('login')" class="flex-1 py-2 rounded-lg text-center transition cursor-pointer text-slate-600 hover:text-slate-900">Log in</button>
+            </div>
+
+            <form onsubmit="window.handleAuthSubmit(event)" class="space-y-4 text-xs">
+                <div id="signupNameField" class="space-y-1">
+                    <label class="font-semibold text-slate-700">Your Name</label>
+                    <input type="text" id="authName" placeholder="e.g. Sarah Lim" class="w-full p-3 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="font-semibold text-slate-700">Email Address</label>
+                    <input type="email" id="authEmail" required placeholder="you@example.com" class="w-full p-3 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="font-semibold text-slate-700">Password</label>
+                    <input type="password" id="authPassword" required placeholder="••••••••" class="w-full p-3 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                </div>
+
+                <div id="signupPolicyField" class="flex items-start gap-2 pt-1">
+                    <input type="checkbox" id="authAgree" required class="mt-0.5 rounded text-forest-800 focus:ring-forest-800">
+                    <label for="authAgree" class="text-[11px] text-slate-600 leading-snug">
+                        I agree to the MindBridge <button type="button" onclick="window.openPolicyModal(event)" class="underline font-medium text-forest-800 hover:text-forest-900 cursor-pointer">Terms &amp; Privacy Policy</button>.
+                    </label>
+                </div>
+
+                <button type="submit" id="authSubmitBtn" class="w-full py-3 bg-forest-800 hover:bg-forest-900 text-white font-semibold rounded-xl shadow transition cursor-pointer">
+                    Create account
+                </button>
+            </form>
+
+            <div class="text-center pt-2 border-t border-paper-200">
+                <button type="button" onclick="window.showLanding()" class="text-xs text-slate-500 hover:text-slate-800 cursor-pointer">
+                    <i class="fa-solid fa-arrow-left text-[10px] mr-1"></i> Back to main screen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== SCREEN 3: MAIN APP SHELL ===================== -->
+    <div id="appShell" class="hidden min-h-screen flex flex-col">
+        
+        <!-- TOP APP NAVBAR -->
+        <nav class="bg-paper-100 border-b border-paper-300/80 sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
+            <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+                
+                <!-- Brand logo -->
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="window.showLanding()" title="Return to Landing" class="hover:opacity-80 transition cursor-pointer">
+                        <svg class="h-8 w-auto" viewBox="0 0 280 80" fill="none">
+                            <circle cx="140" cy="18" r="4" fill="#f97316"/>
+                            <path d="M100 42 C120 22, 160 22, 180 42" stroke="#f97316" stroke-width="5" stroke-linecap="round" fill="none"/>
+                            <circle cx="100" cy="42" r="5" fill="#58483e"/>
+                            <circle cx="180" cy="42" r="5" fill="#88a48b"/>
+                            <text x="18" y="70" font-family="Arial, sans-serif" font-weight="700" font-size="34" fill="#58483e">Mind</text>
+                            <text x="108" y="70" font-family="Arial, sans-serif" font-weight="600" font-size="34" fill="#88a48b">Bridge</text>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Single Active Module Badge Display (Shows only chosen mode) -->
+                <div id="singleModuleBadge" class="bg-paper-200/80 px-4 py-2 rounded-2xl flex items-center border border-paper-300/60 shadow-inner">
+                    <div id="activeModuleCaregiver" class="flex items-center gap-2 text-xs md:text-sm font-semibold text-forest-900">
+                        <i class="fa-solid fa-user-gear text-forest-800"></i>
+                        <span>Caregiver Companion</span>
+                    </div>
+                    <div id="activeModuleCheckin" class="hidden flex items-center gap-2 text-xs md:text-sm font-semibold text-teal-900">
+                        <i class="fa-solid fa-brain text-teal-700"></i>
+                        <span>MindBridge Check <span class="bg-teal-100 text-teal-800 text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase ml-1">M-ACE 30-PT</span></span>
+                    </div>
+                </div>
+
+                <!-- Right Action Buttons -->
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="window.openSummaryModal()" class="bg-forest-800 hover:bg-forest-900 active:scale-95 text-paper-50 font-medium text-xs sm:text-sm px-4 py-2.5 rounded-full shadow-md transition flex items-center gap-2 border border-forest-900/30 cursor-pointer">
+                        <i class="fa-solid fa-user-doctor text-forest-100 text-xs sm:text-sm"></i>
+                        <span class="hidden sm:inline">Prepare summary for doctor</span>
+                        <span class="sm:hidden">Summary</span>
+                    </button>
+
+                    <!-- Profile Settings Button -->
+                    <button type="button" onclick="window.openProfileModal()" title="Profile & Patient Settings" class="flex items-center gap-2 bg-paper-200 hover:bg-forest-100 border border-paper-300 hover:border-forest-300 text-slate-800 p-1.5 pr-3 rounded-full transition cursor-pointer">
+                        <img id="navAvatarImg" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=120" alt="Profile" class="w-7 h-7 rounded-full object-cover border border-forest-800">
+                        <span class="text-xs font-semibold hidden md:inline" id="navProfileName">Sarah</span>
+                        <i class="fa-solid fa-gear text-xs text-slate-500"></i>
+                    </button>
+
+                    <button type="button" onclick="window.logOut()" title="Log out" class="w-9 h-9 rounded-full bg-paper-200 hover:bg-roseflag-100 hover:text-roseflag-700 text-slate-600 flex items-center justify-center transition shrink-0 cursor-pointer">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                    </button>
+                </div>
+
+            </div>
+        </nav>
+
+        <!-- ===================== MODULE 1: CAREGIVER COMPANION VIEW ===================== -->
+        <main id="moduleCaregiver" class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-8 space-y-8 fade-enter">
+
+            <!-- PATIENT SUMMARY HEADER BANNER -->
+            <div class="paper-card p-4 md:p-5 bg-gradient-to-r from-forest-50 via-paper-50 to-peach-50 border-forest-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-forest-800 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+                        <i class="fa-solid fa-hospital-user"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-forest-800 uppercase tracking-wide">Care Recipient Details</span>
+                            <span class="bg-peach-100 text-peach-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-peach-200" id="badgePatientRelation">Parent</span>
+                        </div>
+                        <h3 class="text-base md:text-lg font-serif-warm font-bold text-slate-900" id="bannerPatientName">
+                            Robert Lim <span class="text-xs font-normal text-slate-500" id="bannerPatientAge">(Age: 76)</span>
+                        </h3>
+                    </div>
+                </div>
+                <button type="button" onclick="window.openPatientModal()" class="px-3.5 py-1.5 bg-white hover:bg-paper-100 border border-paper-300 rounded-xl text-xs font-semibold text-slate-700 shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-pen-to-square text-forest-800"></i>
+                    <span>Edit Patient Info</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- LEFT COLUMN: Note Logging & AI Insight (7 Cols) -->
+                <div class="lg:col-span-7 space-y-6">
+                    
+                    <!-- NEW LOG NOTE FORM CARD -->
+                    <div class="paper-card p-6 space-y-4">
+                        <div class="flex items-center justify-between border-b border-paper-200 pb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="w-8 h-8 rounded-xl bg-forest-100 text-forest-800 flex items-center justify-center font-bold text-sm">
+                                    <i class="fa-solid fa-pen"></i>
+                                </span>
+                                <div>
+                                    <h2 class="text-base font-serif-warm font-bold text-slate-900">Write Today's Note</h2>
+                                    <p class="text-[11px] text-slate-500">Record observations in plain language. AI will process trends.</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] text-slate-500 bg-paper-100 px-2.5 py-1 rounded-full border border-paper-200" id="todayDateStr">August 1, 2026</span>
+                        </div>
+
+                        <form onsubmit="window.handleNoteSubmit(event)" class="space-y-3">
+                            <textarea
+                                id="caregiverInput"
+                                rows="4"
+                                required
+                                placeholder="e.g. Dad seemed slightly confused about breakfast time this morning. He remembered his medicine after lunch but repeated his question about grocery shopping three times..."
+                                class="w-full p-3.5 bg-paper-50 border border-paper-300 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-800/20 focus:bg-white transition leading-relaxed resize-none"
+                            ></textarea>
+
+                            <div class="flex items-center justify-between pt-1">
+                                <span class="text-[11px] text-slate-500 flex items-center gap-1">
+                                    <i class="fa-solid fa-shield-halved text-forest-700"></i> Saved securely
+                                </span>
+                                <button
+                                    type="submit"
+                                    class="bg-forest-800 hover:bg-forest-900 active:scale-95 text-white font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2 cursor-pointer"
+                                >
+                                    <i class="fa-solid fa-floppy-disk"></i>
+                                    <span>Save &amp; Analyze Note</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- AI INSIGHT GUIDANCE CONTAINER -->
+                    <div id="aiResponseContainer" class="paper-card p-6 border-forest-300 bg-gradient-to-br from-forest-50/50 to-white hidden fade-enter space-y-3">
+                        <div class="flex items-center justify-between border-b border-forest-100 pb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-forest-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-wand-magic-sparkles text-peach-500"></i> AI Caregiver Guidance
+                            </span>
+                            <span class="text-[10px] bg-forest-100 text-forest-800 px-2 py-0.5 rounded-full font-semibold">Informational</span>
+                        </div>
+                        <div id="aiResponseBody" class="text-xs sm:text-sm text-slate-700 leading-relaxed space-y-2">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- RECENT JOURNAL ENTRIES HISTORY -->
+                    <div class="paper-card p-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-serif-warm font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-book-bookmark text-forest-800"></i> Live Care Journal
+                            </h3>
+                            <span id="journalCount" class="text-xs bg-paper-100 text-slate-600 px-2.5 py-1 rounded-full border border-paper-200">0 entries</span>
+                        </div>
+
+                        <div id="journalList" class="space-y-3 divide-y divide-paper-200">
+                            <!-- Entries rendered via JS -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: Analytics, Trends & Doctor Ready Box (5 Cols) -->
+                <div class="lg:col-span-5 space-y-6">
+                    
+                    <!-- TREND GRAPH CARD -->
+                    <div class="paper-card p-6 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-base font-serif-warm font-bold text-slate-900">Pattern Trends</h3>
+                                <p class="text-[11px] text-slate-500">Observed memory retention &amp; orientation</p>
+                            </div>
+                            <span class="text-xs bg-forest-100 text-forest-800 px-2 py-0.5 rounded-md font-semibold">5-Day View</span>
+                        </div>
+
+                        <div class="h-48 w-full">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 text-center text-[11px] pt-2 border-t border-paper-200">
+                            <div class="p-2 bg-paper-50 rounded-xl border border-paper-200">
+                                <span class="block text-slate-500">Memory Stability</span>
+                                <strong class="text-slate-800 font-bold">Stable (Moderate)</strong>
+                            </div>
+                            <div class="p-2 bg-paper-50 rounded-xl border border-paper-200">
+                                <span class="block text-slate-500">Log Frequency</span>
+                                <strong class="text-forest-800 font-bold">Active Daily</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DOCTOR PREPARATION SUMMARY CARD -->
+                    <div class="paper-card p-6 bg-forest-900 text-white space-y-4">
+                        <div class="flex items-center gap-2 text-peach-300">
+                            <i class="fa-solid fa-file-medical text-xl"></i>
+                            <h3 class="text-base font-serif-warm font-bold text-white">Doctor Visit Preparation</h3>
+                        </div>
+                        <p class="text-xs text-forest-100 leading-relaxed">
+                            Generate a formatted summary report compiling journal observations and M-ACE screening scores to share directly with a medical doctor.
+                        </p>
+                        <button type="button" onclick="window.openSummaryModal()" class="w-full py-3 bg-peach-500 hover:bg-peach-600 text-white font-semibold text-xs rounded-xl shadow transition cursor-pointer flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-print"></i>
+                            <span>Generate Clinical Summary</span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ===================== MODULE 2: MINDBRIDGE CHECK (M-ACE 30-PT) ===================== -->
+        <main id="moduleCheckin" class="hidden flex-1 max-w-5xl w-full mx-auto p-4 md:p-8 space-y-6 fade-enter">
+            
+            <!-- M-ACE HEADER BANNER -->
+            <div class="paper-card p-6 bg-gradient-to-r from-teal-900 to-forest-900 text-white space-y-3">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-teal-800/80 pb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-teal-800 text-teal-200 flex items-center justify-center font-bold text-lg">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-serif-warm font-bold text-white">MindBridge Check (M-ACE 30-Point Exercise)</h2>
+                            <p class="text-xs text-teal-200">Self-administered mini-addenbrooke's cognitive examination baseline tool.</p>
+                        </div>
+                    </div>
+                    <div class="bg-teal-800/80 border border-teal-700/60 rounded-xl px-3 py-1.5 text-right">
+                        <span class="text-[10px] text-teal-300 block uppercase font-bold">Total Score</span>
+                        <span id="totalMaceScoreDisplay" class="text-xl font-bold text-white">0 / 30</span>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-teal-950/60 rounded-xl border border-teal-800/50 text-[11px] text-teal-100 flex items-start gap-2">
+                    <i class="fa-solid fa-circle-info text-teal-400 mt-0.5"></i>
+                    <p><strong>Screening Notice:</strong> This exercise measures cognitive baseline scores across 4 key domains. It is a screening tool, never a diagnostic test. Speak to a physician regarding any cognitive concerns.</p>
+                </div>
+            </div>
+
+            <!-- STEP NAVIGATION TABS -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-2 text-xs font-semibold">
+                <button type="button" id="stepTab1" onclick="window.goToMaceStep(1)" class="px-3 py-1.5 rounded-lg bg-teal-100 text-teal-900 font-bold border border-teal-300 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                    <span>1. Orientation</span>
+                    <span class="text-[10px] bg-teal-200 px-1.5 rounded-full">5pt</span>
+                </button>
+                <button type="button" id="stepTab2" onclick="window.goToMaceStep(2)" class="px-3 py-1.5 rounded-lg bg-paper-100 text-slate-600 hover:text-slate-900 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                    <span>2. Memory</span>
+                    <span class="text-[10px] bg-paper-200 px-1.5 rounded-full">Register</span>
+                </button>
+                <button type="button" id="stepTab3" onclick="window.goToMaceStep(3)" class="px-3 py-1.5 rounded-lg bg-paper-100 text-slate-600 hover:text-slate-900 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                    <span>3. Fluency</span>
+                    <span class="text-[10px] bg-paper-200 px-1.5 rounded-full">7pt</span>
+                </button>
+                <button type="button" id="stepTab4" onclick="window.goToMaceStep(4)" class="px-3 py-1.5 rounded-lg bg-paper-100 text-slate-600 hover:text-slate-900 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                    <span>4. Clock Drawing</span>
+                    <span class="text-[10px] bg-paper-200 px-1.5 rounded-full">5pt</span>
+                </button>
+                <button type="button" id="stepTab5" onclick="window.goToMaceStep(5)" class="px-3 py-1.5 rounded-lg bg-paper-100 text-slate-600 hover:text-slate-900 flex items-center gap-1.5 shrink-0 cursor-pointer">
+                    <span>5. Delayed Recall</span>
+                    <span class="text-[10px] bg-paper-200 px-1.5 rounded-full">7pt</span>
+                </button>
+            </div>
+
+            <!-- STEP 1: ORIENTATION -->
+            <div id="maceStep1" class="paper-card p-6 space-y-4 fade-enter">
+                <div class="flex items-center justify-between border-b border-paper-200 pb-3">
+                    <div>
+                        <h3 class="text-base font-serif-warm font-bold text-slate-900">Step 1: Orientation (5 Points)</h3>
+                        <p class="text-xs text-slate-500">Verify present time and seasonal orientation.</p>
+                    </div>
+                    <button type="button" onclick="window.autoFillOrientationToday()" class="px-3 py-1.5 bg-forest-100 hover:bg-forest-200 text-forest-800 text-xs font-semibold rounded-lg transition cursor-pointer">
+                        Auto-fill Today
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">What year is it?</label>
+                        <input type="number" id="orientYear" placeholder="2026" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">What month is it?</label>
+                        <input type="text" id="orientMonth" placeholder="August" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">What day of week?</label>
+                        <input type="text" id="orientDay" placeholder="Saturday" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">What date is today?</label>
+                        <input type="number" id="orientDate" placeholder="1" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">What season is it?</label>
+                        <input type="text" id="orientSeason" value="Dry Season / Summer" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="pt-3 flex justify-end">
+                    <button type="button" onclick="window.goToMaceStep(2)" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Next: Memory Registration <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 2: REGISTRATION -->
+            <div id="maceStep2" class="paper-card p-6 space-y-4 hidden fade-enter">
+                <div class="border-b border-paper-200 pb-3">
+                    <h3 class="text-base font-serif-warm font-bold text-slate-900">Step 2: Word Memory Registration</h3>
+                    <p class="text-xs text-slate-500">Read these 7 words aloud carefully. You will be asked to recall them in Step 5.</p>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">Harry</div>
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">Barnes</div>
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">73</div>
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">Orchard Road</div>
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">London</div>
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">Postman</div>
+                    <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-center font-bold text-teal-900 text-sm">Rose</div>
+                </div>
+
+                <div class="pt-3 flex justify-between">
+                    <button type="button" onclick="window.goToMaceStep(1)" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+                    </button>
+                    <button type="button" onclick="window.goToMaceStep(3)" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Next: Verbal Fluency <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 3: VERBAL FLUENCY -->
+            <div id="maceStep3" class="paper-card p-6 space-y-4 hidden fade-enter">
+                <div class="flex items-center justify-between border-b border-paper-200 pb-3">
+                    <div>
+                        <h3 class="text-base font-serif-warm font-bold text-slate-900">Step 3: Verbal Fluency (7 Points)</h3>
+                        <p class="text-xs text-slate-500">Name as many animals as you can in 1 minute.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="fluencyTimer" class="font-mono font-bold text-sm bg-slate-900 text-white px-3 py-1 rounded-lg">01:00</span>
+                        <button type="button" onclick="window.startFluencyTimer()" class="px-3 py-1 bg-peach-500 hover:bg-peach-600 text-white text-xs font-semibold rounded-lg transition cursor-pointer">
+                            Start Timer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-slate-700">Enter animal names separated by commas:</label>
+                    <textarea id="fluencyInput" rows="3" oninput="window.updateFluencyCount()" placeholder="e.g. Cat, Dog, Tiger, Lion, Elephant, Zebra, Bear, Monkey..." class="w-full p-3 bg-paper-50 border border-paper-300 rounded-xl text-xs focus:outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <span class="text-slate-600">Animals named: <strong id="fluencyCount" class="text-teal-800">0</strong></span>
+                    <span class="text-slate-500">Score preview: <strong id="fluencyScorePreview" class="text-teal-800">0 / 7 pts</strong></span>
+                </div>
+
+                <div class="pt-3 flex justify-between">
+                    <button type="button" onclick="window.goToMaceStep(2)" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+                    </button>
+                    <button type="button" onclick="window.goToMaceStep(4)" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Next: Clock Drawing <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 4: CLOCK DRAWING -->
+            <div id="maceStep4" class="paper-card p-6 space-y-4 hidden fade-enter">
+                <div class="flex items-center justify-between border-b border-paper-200 pb-3">
+                    <div>
+                        <h3 class="text-base font-serif-warm font-bold text-slate-900">Step 4: Clock Drawing Test (5 Points)</h3>
+                        <p class="text-xs text-slate-500">Draw a clock face, add numbers 1-12, and set the hands to show <strong>10 past 11</strong>.</p>
+                    </div>
+                    <button type="button" onclick="window.clearClockCanvas()" class="px-3 py-1 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-lg cursor-pointer">
+                        Clear Drawing
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <div class="flex justify-center bg-paper-50 p-3 rounded-2xl border border-paper-300">
+                        <canvas id="clockCanvas" width="280" height="280" class="bg-white rounded-full border-2 border-slate-300 cursor-crosshair shadow-inner touch-none"></canvas>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                        <h4 class="font-bold text-slate-800">Checklist Scoring Criteria:</h4>
+                        
+                        <label class="flex items-center gap-2 p-2.5 bg-paper-50 rounded-xl border border-paper-200 cursor-pointer">
+                            <input type="checkbox" id="clockCircle" onchange="window.calculateMaceScore()" class="rounded text-teal-700">
+                            <span>Circle contour drawn correctly (1 pt)</span>
+                        </label>
+
+                        <label class="flex items-center gap-2 p-2.5 bg-paper-50 rounded-xl border border-paper-200 cursor-pointer">
+                            <input type="checkbox" id="clockNumbers" onchange="window.calculateMaceScore()" class="rounded text-teal-700">
+                            <span>Numbers 1-12 in correct positions (2 pt)</span>
+                        </label>
+
+                        <label class="flex items-center gap-2 p-2.5 bg-paper-50 rounded-xl border border-paper-200 cursor-pointer">
+                            <input type="checkbox" id="clockHands" onchange="window.calculateMaceScore()" class="rounded text-teal-700">
+                            <span>Hands set to 10 past 11 accurately (2 pt)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-3 flex justify-between">
+                    <button type="button" onclick="window.goToMaceStep(3)" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+                    </button>
+                    <button type="button" onclick="window.goToMaceStep(5)" class="px-5 py-2 bg-teal-800 hover:bg-teal-900 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Next: Delayed Recall <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- STEP 5: DELAYED RECALL -->
+            <div id="maceStep5" class="paper-card p-6 space-y-4 hidden fade-enter">
+                <div class="border-b border-paper-200 pb-3">
+                    <h3 class="text-base font-serif-warm font-bold text-slate-900">Step 5: Delayed Recall (7 Points)</h3>
+                    <p class="text-xs text-slate-500">Enter the 7 items from Step 2 that you remember without looking back.</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                    <div><input type="text" id="recall1" placeholder="Item 1" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                    <div><input type="text" id="recall2" placeholder="Item 2" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                    <div><input type="text" id="recall3" placeholder="Item 3" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                    <div><input type="text" id="recall4" placeholder="Item 4" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                    <div><input type="text" id="recall5" placeholder="Item 5" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                    <div><input type="text" id="recall6" placeholder="Item 6" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                    <div><input type="text" id="recall7" placeholder="Item 7" oninput="window.calculateMaceScore()" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl"></div>
+                </div>
+
+                <!-- SCORE BREAKDOWN SUMMARY -->
+                <div class="p-4 bg-teal-50 border border-teal-200 rounded-2xl space-y-2 text-xs">
+                    <h4 class="font-bold text-teal-900 uppercase tracking-wide text-[11px]">Subtest Points Breakdown</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-slate-700">
+                        <div>Orientation: <strong id="scoreBreakOrient" class="text-slate-900">0/5</strong></div>
+                        <div>Fluency: <strong id="scoreBreakFluency" class="text-slate-900">0/7</strong></div>
+                        <div>Clock: <strong id="scoreBreakClock" class="text-slate-900">0/5</strong></div>
+                        <div>Recall: <strong id="scoreBreakRecall" class="text-slate-900">0/7</strong></div>
+                    </div>
+                    <p class="text-[11px] text-teal-800 pt-1" id="maceClassificationText">Score calculation ready.</p>
+                </div>
+
+                <div class="pt-3 flex justify-between">
+                    <button type="button" onclick="window.goToMaceStep(4)" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+                    </button>
+                    <button type="button" onclick="window.saveMaceToFirestore()" class="px-6 py-2.5 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl shadow transition cursor-pointer flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Save M-ACE Baseline Score</span>
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ===================== MODALS CONTAINER ===================== -->
+
+    <!-- DOCTOR SUMMARY REPORT MODAL -->
+    <div id="doctorSummaryModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4 z-[990]">
+        <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] border border-paper-200 fade-enter">
+            
+            <div class="bg-forest-900 text-white p-5 flex items-center justify-between shrink-0 no-print">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-forest-800 flex items-center justify-center text-peach-300">
+                        <i class="fa-solid fa-user-doctor text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-serif-warm font-bold">MindBridge Clinical Summary Report</h3>
+                        <p class="text-[11px] text-forest-200">Interactive prep tool for physician visits</p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.closeSummaryModal()" class="w-8 h-8 rounded-full bg-forest-800 hover:bg-forest-700 text-forest-200 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-6 text-xs text-slate-800" id="summaryModalScrollable">
+                
+                <!-- INTERACTIVE CONTROLS (Screen only) -->
+                <div class="paper-card p-4 bg-paper-50 space-y-3 no-print border border-paper-300">
+                    <div class="flex items-center justify-between border-b border-paper-200 pb-2">
+                        <span class="font-bold text-slate-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders text-forest-800"></i> Report Customization Options
+                        </span>
+                        <span class="text-[10px] bg-forest-100 text-forest-900 font-semibold px-2 py-0.5 rounded-full">Interactive</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Caregiver's Note for Doctor (Focus Area)</label>
+                            <input type="text" id="summaryCustomNoteInput" oninput="window.updateSummaryReportView()" placeholder="e.g. Dad has been waking up confused around 3 AM..." class="w-full p-2.5 bg-white border border-paper-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Include Content</label>
+                            <div class="flex items-center gap-4 pt-1.5">
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" id="summaryIncMace" checked onchange="window.updateSummaryReportView()" class="rounded text-forest-800 focus:ring-forest-800">
+                                    <span>M-ACE 30-Pt Scores</span>
+                                </label>
+                                <label class="flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" id="summaryIncJournal" checked onchange="window.updateSummaryReportView()" class="rounded text-forest-800 focus:ring-forest-800">
+                                    <span>Daily Journal Logs</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CLINICAL REPORT CONTENT (Prints cleanly) -->
+                <div id="printableArea" class="print-document-container space-y-6">
+                    
+                    <!-- CLINICAL REPORT HEADER (Print & Screen) -->
+                    <div class="border-b-2 border-forest-900 pb-4 flex items-start justify-between">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold text-xl text-slate-900 font-serif-warm">MindBridge</span>
+                                <span class="text-xs bg-forest-800 text-white font-semibold px-2 py-0.5 rounded">Clinical Summary Report</span>
+                            </div>
+                            <p class="text-[11px] text-slate-500 mt-1">Cognitive Baseline &amp; Daily Caregiver Observation Synthesis</p>
+                        </div>
+                        <div class="text-right text-[11px] text-slate-600">
+                            <p><strong>Report Date:</strong> <span id="summaryReportDate">Today</span></p>
+                            <p><strong>Status:</strong> Caregiver Logged</p>
+                        </div>
+                    </div>
+
+                    <!-- PATIENT DEMOGRAPHICS BAR -->
+                    <div class="grid grid-cols-3 gap-3 p-3.5 bg-forest-50 border border-forest-200 rounded-xl text-xs print-page-break">
+                        <div>
+                            <span class="block text-[10px] text-slate-500 uppercase font-bold">Patient Name</span>
+                            <strong class="text-slate-900 font-bold text-sm" id="summaryPatientName">Robert Lim</strong>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] text-slate-500 uppercase font-bold">Age / Relation</span>
+                            <span class="text-slate-800 font-semibold" id="summaryPatientDetails">76 yrs (Parent)</span>
+                        </div>
+                        <div>
+                            <span class="block text-[10px] text-slate-500 uppercase font-bold">Primary Caregiver</span>
+                            <span class="text-slate-800 font-semibold" id="summaryCaregiverName">Sarah Lim</span>
+                        </div>
+                    </div>
+
+                    <!-- CAREGIVER'S FOCUS NOTE FOR DOCTOR -->
+                    <div id="summaryCustomNoteBlock" class="p-4 bg-amber-50/70 border border-amber-200 rounded-xl text-xs space-y-1 print-page-break hidden">
+                        <strong class="text-amber-900 font-bold uppercase text-[10px] tracking-wider flex items-center gap-1">
+                            <i class="fa-solid fa-comment-medical text-amber-700"></i> Caregiver Priority Focus / Questions for Clinician
+                        </strong>
+                        <p class="text-slate-800 font-medium italic" id="summaryCustomNoteDisplay"></p>
+                    </div>
+
+                    <!-- COGNITIVE BASELINE (M-ACE 30-PT) SUMMARY -->
+                    <div id="summaryMaceSection" class="space-y-3 print-page-break">
+                        <h4 class="font-serif-warm font-bold text-slate-900 text-sm border-b border-paper-300 pb-1 flex items-center justify-between">
+                            <span>1. Cognitive Screening Baseline (M-ACE 30-Point Exercise)</span>
+                            <span class="text-xs font-mono font-bold bg-teal-100 text-teal-900 px-2 py-0.5 rounded border border-teal-200" id="summaryTotalMaceBadge">0 / 30</span>
+                        </h4>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                            <div class="p-2.5 bg-paper-50 border border-paper-200 rounded-lg">
+                                <span class="block text-[10px] text-slate-500">Orientation</span>
+                                <strong id="summaryScoreOrient" class="text-slate-900">0/5</strong>
+                            </div>
+                            <div class="p-2.5 bg-paper-50 border border-paper-200 rounded-lg">
+                                <span class="block text-[10px] text-slate-500">Verbal Fluency</span>
+                                <strong id="summaryScoreFluency" class="text-slate-900">0/7</strong>
+                            </div>
+                            <div class="p-2.5 bg-paper-50 border border-paper-200 rounded-lg">
+                                <span class="block text-[10px] text-slate-500">Clock Drawing</span>
+                                <strong id="summaryScoreClock" class="text-slate-900">0/5</strong>
+                            </div>
+                            <div class="p-2.5 bg-paper-50 border border-paper-200 rounded-lg">
+                                <span class="block text-[10px] text-slate-500">Delayed Recall</span>
+                                <strong id="summaryScoreRecall" class="text-slate-900">0/7</strong>
+                            </div>
+                        </div>
+
+                        <p class="text-[11px] text-slate-600 bg-paper-50 p-2.5 rounded-lg border border-paper-200" id="summaryMaceInterpretation">
+                            Baseline classification ready.
+                        </p>
+                    </div>
+
+                    <!-- DAILY JOURNAL ENTRIES BREAKDOWN -->
+                    <div id="summaryJournalSection" class="space-y-3 print-page-break">
+                        <h4 class="font-serif-warm font-bold text-slate-900 text-sm border-b border-paper-300 pb-1">
+                            2. Caregiver Daily Journal Highlights
+                        </h4>
+                        
+                        <div id="summaryJournalList" class="space-y-2">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+
+                    <!-- CLINICIAN ACTION & SIGNATURE BLOCK (Print optimized) -->
+                    <div class="pt-4 border-t border-slate-300 space-y-4 print-page-break">
+                        <div class="grid grid-cols-2 gap-4 text-xs">
+                            <div class="border border-slate-300 rounded-lg p-3 min-h-[70px]">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase block">Physician Clinical Impression / Notes</span>
+                            </div>
+                            <div class="border border-slate-300 rounded-lg p-3 min-h-[70px]">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase block">Follow-up Plan &amp; Next Appointment</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-end justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-200">
+                            <div>
+                                <p>MindBridge Companion App — Patient Report</p>
+                                <p class="italic">Non-diagnostic clinical synthesis aid. Intended to support patient-doctor communication.</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="border-b border-slate-400 w-36 mb-1 inline-block"></p>
+                                <p>Physician Signature &amp; Date</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="bg-paper-100 p-4 border-t border-paper-200 shrink-0 flex justify-between items-center no-print">
+                <span class="text-[11px] text-slate-500">Non-diagnostic clinical synthesis aid.</span>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="window.closeSummaryModal()" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Close
+                    </button>
+                    <button type="button" id="downloadPdfBtn" onclick="window.downloadReportPdf()" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 active:scale-95 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-pdf"></i> Download PDF
+                    </button>
+                    <button type="button" onclick="window.printReportDoc()" class="px-5 py-2 bg-forest-800 hover:bg-forest-900 active:scale-95 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> Print via Browser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- POLICY & TERMS MODAL -->
+    <div id="policyModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4 z-[999]">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] border border-paper-200 fade-enter">
+            
+            <div class="bg-forest-900 text-white p-5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-peach-300"></i>
+                    <h3 class="text-base font-serif-warm font-bold" id="policyModalTitle">MindBridge Terms &amp; Privacy Policy</h3>
+                </div>
+                <button type="button" onclick="window.closePolicyModal()" class="w-8 h-8 rounded-full bg-forest-800 hover:bg-forest-700 text-forest-200 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- CAREGIVER POLICY CONTENT -->
+            <div id="policyContentCaregiver" class="p-6 overflow-y-auto text-xs text-slate-700 space-y-4 leading-relaxed">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 space-y-1">
+                    <strong class="block font-bold">⚠️ Draft version — Hackathon Prototype (Last updated: 1 August 2026)</strong>
+                    <p class="text-[11px] leading-normal">
+                        This is a draft template prepared for a hackathon prototype/pitch based on Malaysia's Personal Data Protection Act 2010 (PDPA) and digital health landscape. It is not legal advice.
+                    </p>
+                </div>
+
+                <h2 class="text-base font-serif-warm font-bold text-slate-900">MindBridge Caregiver — Terms and Conditions &amp; Privacy Policy</h2>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">1. Introduction</h3>
+                    <p>Welcome to MindBridge Caregiver ("MindBridge," "we," "us," or "our"). MindBridge Caregiver helps families caring for a loved one with dementia record daily observations in plain language, receive guidance, and track patterns over time. By using MindBridge Caregiver, you agree to these Terms and Conditions and Privacy Policy.</p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">2. What MindBridge Caregiver Is — and Is Not</h3>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li><strong>Support Tool:</strong> MindBridge Caregiver is a support and organisational tool for caregivers to record observations and share summaries with healthcare professionals.</li>
+                        <li><strong>Not a Medical Device:</strong> MindBridge Caregiver is not a medical device, and does not diagnose, treat, or provide clinical assessment. AI-generated guidance or risk flags are informational only.</li>
+                        <li><strong>Pattern Observations, Not Diagnosis:</strong> Summaries note observed characteristics commonly associated with dementia presentations solely to support informed clinical discussions. Only a qualified clinician can diagnose dementia.</li>
+                        <li><strong>Not an Emergency Service:</strong> In immediate danger or medical emergencies, call emergency services (999) or visit the nearest emergency department immediately.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">3. Data We Collect</h3>
+                    <p class="mb-2">We collect account data (name, email), care recipient data (nickname/first name, age, relationship), sensitive health diary entries, and usage logs.</p>
+                    <p><strong>Sensitive Personal Data:</strong> Under Malaysia's PDPA, health observations regarding memory, mood, and behavior are treated with heightened protection.</p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">4. Legal Basis, Consent &amp; Behalf Processing</h3>
+                    <p>Explicit consent is required under Section 40 of the PDPA. Where care recipients lack cognitive capacity, consent is obtained from the Caregiver as their legally authorised representative to protect their vital interests.</p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">5. AI Processing &amp; Cross-Border Transfer</h3>
+                    <p>Entries are processed by secure AI language model providers (which may operate outside Malaysia) solely to provide guidance, summaries, and pattern tracking. No personal data is sold or used for advertising.</p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">6. Your Rights &amp; Security</h3>
+                    <p>You maintain rights under PDPA to access, correct, delete, or request copies of recorded data. Data is encrypted in transit and securely partitioned.</p>
+                </div>
+            </div>
+
+            <!-- CHECK (SCREENING) POLICY CONTENT -->
+            <div id="policyContentCheck" class="hidden p-6 overflow-y-auto text-xs text-slate-700 space-y-4 leading-relaxed">
+                <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl text-teal-900 space-y-1">
+                    <strong class="block font-bold">⚠️ Draft version — Hackathon Prototype (Last updated: 1 August 2026)</strong>
+                    <p class="text-[11px] leading-normal">
+                        This document covers <strong>MindBridge Check</strong> only. It is aligned with the PDPA and Malaysian digital health interim guidelines.
+                    </p>
+                </div>
+
+                <h2 class="text-base font-serif-warm font-bold text-slate-900">MindBridge Check — Terms and Conditions &amp; Privacy Policy</h2>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">1. Introduction</h3>
+                    <p>MindBridge Check is a self-administered cognitive screening tool that lets an individual check their own cognitive baseline through short exercises (such as clock-drawing and word-recall tasks) and track results over time.</p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">2. Screening Tool — Not Self-Diagnosis</h3>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li><strong>Screening vs Diagnosis:</strong> MindBridge Check is a screening tool, not a diagnostic tool. It produces descriptive results (e.g. within/outside typical range) and never outputs a probability, stage, or named diagnostic condition.</li>
+                        <li><strong>Disclaimer:</strong> Every result screen notes: <em>"This is a screening exercise, not a diagnosis. Speak with a doctor regarding memory or thinking concerns."</em></li>
+                        <li><strong>Target Users:</strong> Intended for adults aged 18+ for self-check or with consenting family members.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">3. Data Collection &amp; Family Screening Consent</h3>
+                    <p>Collects account info, screening score data, and timestamps. When testing a family member, explicit consent from that individual (or their legal guardian) is mandatory prior to test start.</p>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm mb-1">4. Rights, Storage &amp; Digital Health Alignment</h3>
+                    <p>Maintains PDPA compliance regarding data access, deletion, and cross-border encryption standard safeguards under Malaysian law.</p>
+                </div>
+            </div>
+
+            <div class="bg-paper-100 p-4 border-t border-paper-200 shrink-0 flex justify-end">
+                <button type="button" onclick="window.closePolicyModal()" class="px-6 py-2 bg-forest-800 hover:bg-forest-900 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+                    I Agree &amp; Understand
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CAREGIVER PROFILE MODAL -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4 z-[995]">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-paper-200 fade-enter">
+            
+            <div class="bg-forest-900 text-white p-5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear text-peach-300"></i>
+                    <h3 class="text-base font-serif-warm font-bold">Edit Caregiver Profile &amp; Account</h3>
+                </div>
+                <button type="button" onclick="window.closeProfileModal()" class="w-8 h-8 rounded-full bg-forest-800 hover:bg-forest-700 text-forest-200 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="window.saveProfileSettings(event)" class="p-6 overflow-y-auto space-y-5 text-xs">
+
+                <!-- PROFILE PICTURE SELECTION -->
+                <div class="flex flex-col items-center justify-center space-y-3 pb-4 border-b border-paper-200">
+                    <div class="relative group">
+                        <img id="profileAvatarPreview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" alt="Avatar" class="w-20 h-20 rounded-full object-cover border-4 border-forest-800 shadow-md">
+                        <span class="absolute bottom-0 right-0 bg-peach-500 text-white p-1.5 rounded-full text-xs shadow">
+                            <i class="fa-solid fa-camera"></i>
+                        </span>
+                    </div>
+
+                    <p class="text-xs font-semibold text-slate-700">Choose Avatar Picture</p>
+
+                    <!-- AVATAR PRESETS -->
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="window.setAvatar('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200')" class="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent focus:border-forest-800 hover:scale-105 transition cursor-pointer">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" class="w-full h-full object-cover">
+                        </button>
+                        <button type="button" onclick="window.setAvatar('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200')" class="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent focus:border-forest-800 hover:scale-105 transition cursor-pointer">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" class="w-full h-full object-cover">
+                        </button>
+                        <button type="button" onclick="window.setAvatar('https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200')" class="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent focus:border-forest-800 hover:scale-105 transition cursor-pointer">
+                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=100" class="w-full h-full object-cover">
+                        </button>
+                        <button type="button" onclick="window.setAvatar('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200')" class="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent focus:border-forest-800 hover:scale-105 transition cursor-pointer">
+                            <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100" class="w-full h-full object-cover">
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CAREGIVER DETAILS -->
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Your Name</label>
+                        <input type="text" id="editUserName" value="Sarah Lim" required class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                        <input type="email" id="editUserEmail" value="sarah.lim@example.com" required class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                    </div>
+                </div>
+
+                <!-- CHANGE PASSWORD SECTION -->
+                <div class="pt-3 border-t border-paper-200 space-y-3">
+                    <button type="button" onclick="window.toggleChangePasswordSection()" class="flex items-center justify-between w-full py-2 text-xs font-bold text-slate-800 hover:text-forest-800 transition cursor-pointer">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-lock text-forest-700"></i> Change Security Password
+                        </span>
+                        <i id="changePasswordChevron" class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                    </button>
+
+                    <div id="changePasswordFields" class="hidden space-y-3 p-3 bg-paper-50 border border-paper-200 rounded-2xl fade-enter">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Current Password</label>
+                            <div class="relative">
+                                <input type="password" id="editCurrentPassword" placeholder="••••••••" class="w-full p-2.5 pr-8 bg-white border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                                <button type="button" onclick="window.togglePasswordVisibility('editCurrentPassword', 'eyeIcon1')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                                    <i id="eyeIcon1" class="fa-solid fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">New Password</label>
+                            <div class="relative">
+                                <input type="password" id="editNewPassword" oninput="window.checkPasswordStrength()" placeholder="At least 6 characters" class="w-full p-2.5 pr-8 bg-white border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                                <button type="button" onclick="window.togglePasswordVisibility('editNewPassword', 'eyeIcon2')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                                    <i id="eyeIcon2" class="fa-solid fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                            <div id="passwordStrengthBar" class="h-1 w-full bg-slate-200 rounded-full mt-1.5 overflow-hidden hidden">
+                                <div id="passwordStrengthFill" class="h-full bg-amber-500 w-0 transition-all duration-300"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-700 mb-1">Confirm New Password</label>
+                            <div class="relative">
+                                <input type="password" id="editConfirmPassword" placeholder="Re-enter new password" class="w-full p-2.5 pr-8 bg-white border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                                <button type="button" onclick="window.togglePasswordVisibility('editConfirmPassword', 'eyeIcon3')" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600">
+                                    <i id="eyeIcon3" class="fa-solid fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="profilePasswordMsg" class="hidden p-2 rounded-lg text-[11px] font-medium"></div>
+                    </div>
+                </div>
+
+                <!-- FORM ACTION BUTTONS -->
+                <div class="pt-4 border-t border-paper-200 flex items-center justify-end gap-2">
+                    <button type="button" onclick="window.closeProfileModal()" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-forest-800 hover:bg-forest-900 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Save Profile</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PATIENT INFO MODAL -->
+    <div id="patientModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm hidden items-center justify-center p-4 z-[995]">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-paper-200 fade-enter">
+            
+            <div class="bg-forest-900 text-white p-5 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-hospital-user text-peach-300"></i>
+                    <h3 class="text-base font-serif-warm font-bold">Edit Patient Details</h3>
+                </div>
+                <button type="button" onclick="window.closePatientModal()" class="w-8 h-8 rounded-full bg-forest-800 hover:bg-forest-700 text-forest-200 hover:text-white flex items-center justify-center transition cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="window.savePatientSettings(event)" class="p-6 overflow-y-auto space-y-4">
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Patient First Name / Nickname</label>
+                        <input type="text" id="editPatientName" value="Robert Lim" required placeholder="e.g. Grandma / Dad / Robert" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                        <span class="text-[10px] text-slate-500 mt-1 block">Data minimisation: Avoid full legal names for privacy protection.</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Patient Age</label>
+                            <input type="number" id="editPatientAge" value="76" min="1" max="120" required class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Relationship</label>
+                            <select id="editPatientRelation" class="w-full p-2.5 bg-paper-50 border border-paper-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-forest-800/20">
+                                <option value="Parent">Parent</option>
+                                <option value="Spouse">Spouse</option>
+                                <option value="Grandparent">Grandparent</option>
+                                <option value="Relative">Relative</option>
+                                <option value="Friend / Other">Friend / Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORM ACTION BUTTONS -->
+                <div class="pt-4 border-t border-paper-200 flex items-center justify-end gap-2">
+                    <button type="button" onclick="window.closePatientModal()" class="px-4 py-2 bg-paper-200 hover:bg-paper-300 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-forest-800 hover:bg-forest-900 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Save Patient Details</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT ENGINE & MODULE SETUP -->
+    <script>
+        // GLOBAL APPLICATION STATE
+        let currentUser = {
+            displayName: 'Sarah Lim',
+            email: 'sarah.lim@example.com',
+            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+            patientName: 'Robert Lim',
+            patientAge: 76,
+            patientRelation: 'Parent'
+        };
+
+        let pendingTargetModule = 'caregiver';
+        let liveJournalEntries = [];
+        let trendChartInstance = null;
+        let fluencyTimerInterval = null;
+
+        // ATTACH ALL GLOBAL WINDOW HANDLERS IMMEDIATELY FOR FAST INTERACTIVITY
+        window.showAuth = function(mode, targetModule) {
+            if (targetModule) pendingTargetModule = targetModule;
+            document.getElementById('screenLanding').classList.add('hidden');
+            document.getElementById('screenAuth').classList.remove('hidden');
+            window.setAuthMode(mode);
+        };
+
+        window.showLanding = function() {
+            document.getElementById('screenAuth').classList.add('hidden');
+            document.getElementById('appShell').classList.add('hidden');
+            document.getElementById('screenLanding').classList.remove('hidden');
+        };
+
+        window.setAuthMode = function(mode) {
+            const isSignup = mode === 'signup';
+            document.getElementById('authTabSignup').className = isSignup 
+                ? "flex-1 py-2 rounded-lg text-center transition cursor-pointer bg-white text-slate-900 shadow-sm"
+                : "flex-1 py-2 rounded-lg text-center transition cursor-pointer text-slate-600 hover:text-slate-900";
+
+            document.getElementById('authTabLogin').className = !isSignup 
+                ? "flex-1 py-2 rounded-lg text-center transition cursor-pointer bg-white text-slate-900 shadow-sm"
+                : "flex-1 py-2 rounded-lg text-center transition cursor-pointer text-slate-600 hover:text-slate-900";
+
+            document.getElementById('signupNameField').style.display = isSignup ? 'block' : 'none';
+            document.getElementById('signupPolicyField').style.display = isSignup ? 'flex' : 'none';
+            document.getElementById('authSubmitBtn').textContent = isSignup ? 'Create account' : 'Log in';
+        };
+
+        // CAREGIVER PROFILE MODAL HANDLERS
+        window.openProfileModal = function() {
+            document.getElementById('editUserName').value = currentUser.displayName || 'Sarah Lim';
+            document.getElementById('editUserEmail').value = currentUser.email || 'sarah.lim@example.com';
+            
+            // Clear password fields
+            document.getElementById('editCurrentPassword').value = '';
+            document.getElementById('editNewPassword').value = '';
+            document.getElementById('editConfirmPassword').value = '';
+            
+            const msg = document.getElementById('profilePasswordMsg');
+            if (msg) msg.classList.add('hidden');
+
+            const preview = document.getElementById('profileAvatarPreview');
+            if (preview) preview.src = currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
+
+            const modal = document.getElementById('profileModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        };
+
+        window.closeProfileModal = function() {
+            const modal = document.getElementById('profileModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
+        window.toggleChangePasswordSection = function() {
+            const fields = document.getElementById('changePasswordFields');
+            const chevron = document.getElementById('changePasswordChevron');
+            if (!fields) return;
+
+            const isHidden = fields.classList.contains('hidden');
+            fields.classList.toggle('hidden', !isHidden);
+            if (chevron) {
+                chevron.className = isHidden ? "fa-solid fa-chevron-up text-[10px] text-slate-400" : "fa-solid fa-chevron-down text-[10px] text-slate-400";
+            }
+        };
+
+        window.togglePasswordVisibility = function(inputId, eyeIconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(eyeIconId);
+            if (!input || !icon) return;
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash text-xs';
+            } else {
+                input.type = 'password';
+                icon.className = 'fa-solid fa-eye text-xs';
+            }
+        };
+
+        window.checkPasswordStrength = function() {
+            const val = document.getElementById('editNewPassword').value;
+            const bar = document.getElementById('passwordStrengthBar');
+            const fill = document.getElementById('passwordStrengthFill');
+            
+            if (!val) {
+                if (bar) bar.classList.add('hidden');
+                return;
+            }
+
+            if (bar) bar.classList.remove('hidden');
+            let pct = 25;
+            let color = 'bg-roseflag-700';
+
+            if (val.length >= 6) { pct = 50; color = 'bg-amber-500'; }
+            if (val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val)) { pct = 100; color = 'bg-emerald-600'; }
+
+            if (fill) {
+                fill.style.width = pct + '%';
+                fill.className = `h-full ${color} transition-all duration-300`;
+            }
+        };
+
+        window.setAvatar = function(url) {
+            currentUser.avatar = url;
+            const preview = document.getElementById('profileAvatarPreview');
+            if (preview) preview.src = url;
+        };
+
+        window.saveProfileSettings = function(e) {
+            e.preventDefault();
+            const newName = document.getElementById('editUserName').value.trim();
+            const newEmail = document.getElementById('editUserEmail').value.trim();
+            const currentPass = document.getElementById('editCurrentPassword').value;
+            const newPass = document.getElementById('editNewPassword').value;
+            const confirmPass = document.getElementById('editConfirmPassword').value;
+            const msg = document.getElementById('profilePasswordMsg');
+
+            // Handle Password Change Validation if entered
+            if (currentPass || newPass || confirmPass) {
+                if (!currentPass) {
+                    showPasswordMsg('Please enter your current password to change it.', 'bg-roseflag-100 text-roseflag-700 border border-roseflag-200');
+                    return;
+                }
+                if (newPass.length < 6) {
+                    showPasswordMsg('New password must be at least 6 characters.', 'bg-roseflag-100 text-roseflag-700 border border-roseflag-200');
+                    return;
+                }
+                if (newPass !== confirmPass) {
+                    showPasswordMsg('New password and confirmation do not match.', 'bg-roseflag-100 text-roseflag-700 border border-roseflag-200');
+                    return;
+                }
+            }
+
+            currentUser.displayName = newName || currentUser.displayName;
+            currentUser.email = newEmail || currentUser.email;
+
+            // Update UI across app
+            document.getElementById('navProfileName').textContent = currentUser.displayName.split(' ')[0] || 'Profile';
+            document.getElementById('navAvatarImg').src = currentUser.avatar;
+
+            window.closeProfileModal();
+        };
+
+        function showPasswordMsg(text, classes) {
+            const msg = document.getElementById('profilePasswordMsg');
+            if (msg) {
+                msg.textContent = text;
+                msg.className = `p-2.5 rounded-xl text-[11px] font-medium ${classes}`;
+                msg.classList.remove('hidden');
+            }
+        }
+
+        // PATIENT INFO MODAL HANDLERS
+        window.openPatientModal = function() {
+            document.getElementById('editPatientName').value = currentUser.patientName || 'Robert Lim';
+            document.getElementById('editPatientAge').value = currentUser.patientAge || 76;
+            document.getElementById('editPatientRelation').value = currentUser.patientRelation || 'Parent';
+
+            const modal = document.getElementById('patientModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        };
+
+        window.closePatientModal = function() {
+            const modal = document.getElementById('patientModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
+        window.savePatientSettings = function(e) {
+            e.preventDefault();
+            currentUser.patientName = document.getElementById('editPatientName').value;
+            currentUser.patientAge = document.getElementById('editPatientAge').value;
+            currentUser.patientRelation = document.getElementById('editPatientRelation').value;
+
+            // Update UI across app
+            document.getElementById('bannerPatientName').childNodes[0].nodeValue = currentUser.patientName + ' ';
+            document.getElementById('bannerPatientAge').textContent = `(Age: ${currentUser.patientAge})`;
+            document.getElementById('badgePatientRelation').textContent = currentUser.patientRelation;
+
+            window.closePatientModal();
+        };
+
+        // POLICY MODAL HANDLERS FOR DEDICATED SINGLE-VIEWING
+        window.openPolicyModal = function(e, type) {
+            if (e && e.preventDefault) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Determine target type (caregiver vs check) based on param or pending target module
+            let targetType = type;
+            if (!targetType) {
+                targetType = (pendingTargetModule === 'checkin' || pendingTargetModule === 'check') ? 'check' : 'caregiver';
+            } else if (targetType === 'checkin') {
+                targetType = 'check';
+            }
+
+            const isCaregiver = (targetType === 'caregiver');
+            document.getElementById('policyContentCaregiver').classList.toggle('hidden', !isCaregiver);
+            document.getElementById('policyContentCheck').classList.toggle('hidden', isCaregiver);
+
+            const titleEl = document.getElementById('policyModalTitle');
+            if (titleEl) {
+                titleEl.textContent = isCaregiver 
+                    ? "MindBridge Caregiver — Terms & Privacy Policy" 
+                    : "MindBridge Check — Terms & Privacy Policy";
+            }
+
+            const modal = document.getElementById('policyModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        };
+
+        window.closePolicyModal = function() {
+            const modal = document.getElementById('policyModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
+        window.switchModule = function(moduleName) {
+            const caregiverView = document.getElementById('moduleCaregiver');
+            const checkinView = document.getElementById('moduleCheckin');
+            const activeCaregiver = document.getElementById('activeModuleCaregiver');
+            const activeCheckin = document.getElementById('activeModuleCheckin');
+
+            if (moduleName === 'checkin' || moduleName === 'check') {
+                caregiverView.classList.add('hidden');
+                checkinView.classList.remove('hidden');
+                
+                if (activeCaregiver) activeCaregiver.classList.add('hidden');
+                if (activeCheckin) activeCheckin.classList.remove('hidden');
+                
+                setTimeout(initClockCanvas, 100);
+            } else {
+                checkinView.classList.add('hidden');
+                caregiverView.classList.remove('hidden');
+
+                if (activeCheckin) activeCheckin.classList.add('hidden');
+                if (activeCaregiver) activeCaregiver.classList.remove('hidden');
+            }
+        };
+
+        window.continueAsGuest = function() {
+            currentUser = { 
+                uid: 'demo-user-123', 
+                email: 'sarah.lim@example.com', 
+                displayName: 'Sarah Lim',
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+                patientName: 'Robert Lim',
+                patientAge: 76,
+                patientRelation: 'Parent'
+            };
+            document.getElementById('screenLanding').classList.add('hidden');
+            document.getElementById('screenAuth').classList.add('hidden');
+            document.getElementById('appShell').classList.remove('hidden');
+            
+            window.switchModule(pendingTargetModule || 'caregiver');
+            
+            liveJournalEntries = getLocalJournal();
+            renderJournalList(liveJournalEntries);
+            updateTrendChart(liveJournalEntries);
+        };
+
+        window.handleAuthSubmit = function(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value || 'sarah@example.com';
+            const name = document.getElementById('authName').value || 'Sarah Lim';
+            
+            currentUser.displayName = name;
+            currentUser.email = email;
+            document.getElementById('screenLanding').classList.add('hidden');
+            document.getElementById('screenAuth').classList.add('hidden');
+            document.getElementById('appShell').classList.remove('hidden');
+            document.getElementById('navProfileName').textContent = name.split(' ')[0] || 'Profile';
+            
+            window.switchModule(pendingTargetModule || 'caregiver');
+            
+            liveJournalEntries = getLocalJournal();
+            renderJournalList(liveJournalEntries);
+            updateTrendChart(liveJournalEntries);
+        };
+
+        window.logOut = function() {
+            document.getElementById('appShell').classList.add('hidden');
+            document.getElementById('screenAuth').classList.add('hidden');
+            document.getElementById('screenLanding').classList.remove('hidden');
+        };
+
+        // STORAGE HELPERS
+        function getLocalJournal() {
+            try {
+                const stored = localStorage.getItem('mindbridge_journal');
+                if (stored) return JSON.parse(stored);
+            } catch (e) {}
+
+            return [
+                {
+                    id: 'note-1',
+                    timestamp: Date.now() - 86400000,
+                    dateStr: 'Yesterday',
+                    content: 'Dad woke up early and recognized everyone clearly. Remained calm throughout dinner and enjoyed listening to music.',
+                    sentiment: 'Positive',
+                    tags: ['Memory', 'Mood']
+                }
+            ];
+        }
+
+        function saveLocalJournal(entries) {
+            try {
+                localStorage.setItem('mindbridge_journal', JSON.stringify(entries));
+            } catch (e) {}
+        }
+
+        window.handleNoteSubmit = function(e) {
+            e.preventDefault();
+            const input = document.getElementById('caregiverInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const newEntry = {
+                id: 'note-' + Date.now(),
+                timestamp: Date.now(),
+                dateStr: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                content: text,
+                sentiment: 'Observed',
+                tags: ['Memory', 'Behavior']
+            };
+
+            liveJournalEntries.unshift(newEntry);
+            saveLocalJournal(liveJournalEntries);
+            renderJournalList(liveJournalEntries);
+            updateTrendChart(liveJournalEntries);
+
+            // AI Insight box response
+            const aiContainer = document.getElementById('aiResponseContainer');
+            const aiBody = document.getElementById('aiResponseBody');
+            aiContainer.classList.remove('hidden');
+            aiBody.innerHTML = `
+                <p><strong>Caregiver Reflection:</strong> Thank you for recording today's note for <strong>${currentUser.patientName}</strong>. Daily observations help track subtle changes over time. Consider noting if this behavior recurs around the same time tomorrow.</p>
+            `;
+
+            input.value = '';
+        };
+
+        function renderJournalList(entries) {
+            const list = document.getElementById('journalList');
+            const countTag = document.getElementById('journalCount');
+            if (!list) return;
+
+            if (countTag) countTag.textContent = `${entries.length} entries`;
+
+            if (entries.length === 0) {
+                list.innerHTML = `
+                    <div class="py-8 text-center text-xs text-slate-400">
+                        <i class="fa-solid fa-feather text-2xl mb-2 text-paper-300"></i>
+                        <p>No journal entries yet. Write your first note above!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = entries.map(entry => `
+                <div class="py-4 space-y-2">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="font-bold text-slate-800">${entry.dateStr || 'Recent Entry'}</span>
+                        <span class="bg-paper-100 text-slate-600 px-2 py-0.5 rounded-md border border-paper-200">${entry.sentiment || 'Journal'}</span>
+                    </div>
+                    <p class="text-sm text-slate-700 leading-relaxed">${entry.content}</p>
+                </div>
+            `).join('');
+        }
+
+        // TREND CHART LOGIC
+        function updateTrendChart(entries) {
+            const ctx = document.getElementById('trendChart');
+            if (!ctx) return;
+
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            const labels = entries.length ? entries.slice(0, 5).reverse().map(e => e.dateStr || 'Day') : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+            const dataMemory = entries.length ? [3, 4, 2, 5, 3] : [2, 3, 4, 3, 2];
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Memory Retention',
+                            data: dataMemory,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { min: 0, max: 5 } }
+                }
+            });
+        }
+
+        // M-ACE SCREENING STEP NAVIGATION
+        window.goToMaceStep = function(stepNum) {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`maceStep${i}`);
+                const tab = document.getElementById(`stepTab${i}`);
+                if (el) el.classList.add('hidden');
+                if (tab) {
+                    tab.className = "px-3 py-1.5 rounded-lg bg-paper-100 text-slate-600 hover:text-slate-900 flex items-center gap-1.5 shrink-0 cursor-pointer";
+                }
+            }
+
+            const targetStep = document.getElementById(`maceStep${stepNum}`);
+            const targetTab = document.getElementById(`stepTab${stepNum}`);
+            if (targetStep) targetStep.classList.remove('hidden');
+            if (targetTab) {
+                targetTab.className = "px-3 py-1.5 rounded-lg bg-teal-100 text-teal-900 font-bold border border-teal-300 flex items-center gap-1.5 shrink-0 cursor-pointer";
+            }
+
+            if (stepNum === 4) {
+                setTimeout(initClockCanvas, 100);
+            }
+        };
+
+        window.autoFillOrientationToday = function() {
+            const now = new Date();
+            document.getElementById('orientYear').value = now.getFullYear();
+            document.getElementById('orientDate').value = now.getDate();
+            document.getElementById('orientMonth').value = now.toLocaleString('en-US', { month: 'long' });
+            document.getElementById('orientDay').value = now.toLocaleString('en-US', { weekday: 'long' });
+            window.calculateMaceScore();
+        };
+
+        window.startFluencyTimer = function() {
+            let secondsLeft = 60;
+            const timerDisplay = document.getElementById('fluencyTimer');
+            if (fluencyTimerInterval) clearInterval(fluencyTimerInterval);
+
+            fluencyTimerInterval = setInterval(() => {
+                secondsLeft--;
+                const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+                const s = String(secondsLeft % 60).padStart(2, '0');
+                if (timerDisplay) timerDisplay.textContent = `${m}:${s}`;
+
+                if (secondsLeft <= 0) {
+                    clearInterval(fluencyTimerInterval);
+                }
+            }, 1000);
+        };
+
+        window.updateFluencyCount = function() {
+            const val = document.getElementById('fluencyInput').value;
+            const items = val.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const count = items.length;
+            document.getElementById('fluencyCount').textContent = count;
+            
+            const score = Math.min(7, count);
+            document.getElementById('fluencyScorePreview').textContent = `${score} / 7 pts`;
+            window.calculateMaceScore();
+        };
+
+        // CANVAS CLOCK DRAWING
+        let isDrawing = false;
+        function initClockCanvas() {
+            const canvas = document.getElementById('clockCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+
+            canvas.onmousedown = canvas.ontouchstart = function(e) {
+                isDrawing = true;
+                const pos = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y);
+            };
+
+            canvas.onmousemove = canvas.ontouchmove = function(e) {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            };
+
+            canvas.onmouseup = canvas.ontouchend = function() {
+                isDrawing = false;
+            };
+        }
+
+        window.clearClockCanvas = function() {
+            const canvas = document.getElementById('clockCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        };
+
+        window.calculateMaceScore = function() {
+            let orientScore = 0;
+            if (document.getElementById('orientYear').value) orientScore++;
+            if (document.getElementById('orientMonth').value) orientScore++;
+            if (document.getElementById('orientDay').value) orientScore++;
+            if (document.getElementById('orientDate').value) orientScore++;
+            if (document.getElementById('orientSeason').value) orientScore++;
+
+            const fluencyCount = parseInt(document.getElementById('fluencyCount').textContent || '0', 10);
+            const fluencyScore = Math.min(7, fluencyCount);
+
+            let clockScore = 0;
+            if (document.getElementById('clockCircle').checked) clockScore += 1;
+            if (document.getElementById('clockNumbers').checked) clockScore += 2;
+            if (document.getElementById('clockHands').checked) clockScore += 2;
+
+            let recallScore = 0;
+            for (let i = 1; i <= 7; i++) {
+                if (document.getElementById(`recall${i}`).value.trim()) recallScore++;
+            }
+
+            const total = orientScore + fluencyScore + clockScore + recallScore;
+
+            document.getElementById('scoreBreakOrient').textContent = `${orientScore} / 5 pt`;
+            document.getElementById('scoreBreakFluency').textContent = `${fluencyScore} / 7 pt`;
+            document.getElementById('scoreBreakClock').textContent = `${clockScore} / 5 pt`;
+            document.getElementById('scoreBreakRecall').textContent = `${recallScore} / 7 pt`;
+            document.getElementById('totalMaceScoreDisplay').textContent = `${total} / 30`;
+
+            const classEl = document.getElementById('maceClassificationText');
+            if (classEl) {
+                if (total >= 25) {
+                    classEl.textContent = "Score is within normal range (25-30). Continue routine tracking.";
+                } else if (total >= 20) {
+                    classEl.textContent = "Mild cognitive variations observed (20-24). Consider sharing with a healthcare provider.";
+                } else {
+                    classEl.textContent = "Baseline score indicates possible cognitive changes (<20). Recommended for medical consultation.";
+                }
+            }
+        };
+
+        window.saveMaceToFirestore = function() {
+            alert("M-ACE Baseline Score saved successfully!");
+        };
+
+        // DOCTOR SUMMARY REPORT MODAL & PRINT/PDF EXPORT
+        window.openSummaryModal = function() {
+            const modal = document.getElementById('doctorSummaryModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+
+            document.getElementById('summaryReportDate').textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            window.updateSummaryReportView();
+        };
+
+        window.updateSummaryReportView = function() {
+            // Demographics update
+            document.getElementById('summaryPatientName').textContent = currentUser.patientName || 'Robert Lim';
+            document.getElementById('summaryPatientDetails').textContent = `${currentUser.patientAge || 76} yrs (${currentUser.patientRelation || 'Parent'})`;
+            document.getElementById('summaryCaregiverName').textContent = currentUser.displayName || 'Sarah Lim';
+
+            // Caregiver Custom Note Block
+            const noteInput = document.getElementById('summaryCustomNoteInput').value.trim();
+            const noteBlock = document.getElementById('summaryCustomNoteBlock');
+            const noteDisplay = document.getElementById('summaryCustomNoteDisplay');
+            if (noteInput) {
+                noteBlock.classList.remove('hidden');
+                noteDisplay.textContent = `"${noteInput}"`;
+            } else {
+                noteBlock.classList.add('hidden');
+            }
+
+            // M-ACE Section Toggle & Data
+            const incMace = document.getElementById('summaryIncMace').checked;
+            const maceSec = document.getElementById('summaryMaceSection');
+            maceSec.style.display = incMace ? 'block' : 'none';
+
+            if (incMace) {
+                const totalMace = document.getElementById('totalMaceScoreDisplay').textContent || '0 / 30';
+                document.getElementById('summaryTotalMaceBadge').textContent = totalMace;
+                document.getElementById('summaryScoreOrient').textContent = document.getElementById('scoreBreakOrient').textContent || '0/5';
+                document.getElementById('summaryScoreFluency').textContent = document.getElementById('scoreBreakFluency').textContent || '0/7';
+                document.getElementById('summaryScoreClock').textContent = document.getElementById('scoreBreakClock').textContent || '0/5';
+                document.getElementById('summaryScoreRecall').textContent = document.getElementById('scoreBreakRecall').textContent || '0/7';
+                document.getElementById('summaryMaceInterpretation').textContent = document.getElementById('maceClassificationText').textContent || 'Baseline ready.';
+            }
+
+            // Journal Highlights Section Toggle & Data
+            const incJournal = document.getElementById('summaryIncJournal').checked;
+            const journalSec = document.getElementById('summaryJournalSection');
+            const journalListEl = document.getElementById('summaryJournalList');
+            journalSec.style.display = incJournal ? 'block' : 'none';
+
+            if (incJournal) {
+                if (liveJournalEntries.length === 0) {
+                    journalListEl.innerHTML = `<p class="text-xs text-slate-400 italic">No journal entries recorded yet.</p>`;
+                } else {
+                    journalListEl.innerHTML = liveJournalEntries.map(e => `
+                        <div class="p-2.5 bg-paper-50 border border-paper-200 rounded-lg text-xs space-y-1">
+                            <div class="flex justify-between font-bold text-slate-800 text-[11px]">
+                                <span>${e.dateStr || 'Logged Note'}</span>
+                                <span class="text-slate-500 font-normal">${e.sentiment || 'Observation'}</span>
+                            </div>
+                            <p class="text-slate-700 leading-normal">${e.content}</p>
+                        </div>
+                    `).join('');
+                }
+            }
+        };
+
+        window.printReportDoc = function() {
+            window.updateSummaryReportView();
+            window.print();
+        };
+
+        window.downloadReportPdf = function() {
+            window.updateSummaryReportView();
+
+            const btn = document.getElementById('downloadPdfBtn');
+            const busy = function(v) {
+                if (btn) { btn.disabled = v; btn.style.opacity = v ? '0.6' : '1'; btn.style.cursor = v ? 'wait' : 'pointer'; }
+            };
+
+            if (typeof window.jspdf === 'undefined') {
+                alert('PDF library is still loading. Please check your internet connection and try again.');
+                return;
+            }
+
+            busy(true);
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const W = pdf.internal.pageSize.getWidth();
+                const H = pdf.internal.pageSize.getHeight();
+                const M = 15;
+                const bottom = H - M;
+
+                const clean = function(s) {
+                    return String(s == null ? '' : s)
+                        .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+                        .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+                        .replace(/\u2013|\u2014/g, '-')
+                        .replace(/\u2026/g, '...')
+                        .replace(/\u2022|\u00B7/g, '-')
+                        .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^\x20-\x7E]/g, '')
+                        .replace(/\s+/g, ' ').trim();
+                };
+
+                const P = {
+                    name: clean(currentUser.patientName) || 'Patient Name',
+                    age: currentUser.patientAge || '--',
+                    rel: clean(currentUser.patientRelation) || '--',
+                    caregiver: clean(currentUser.displayName) || 'Caregiver'
+                };
+                const reportDate = (document.getElementById('summaryReportDate').textContent || new Date().toLocaleDateString());
+
+                let y = M;
+
+                const ensure = function(needed) {
+                    if (y + needed > bottom) { pdf.addPage(); y = M; }
+                };
+
+                const sectionHeader = function(num, title) {
+                    ensure(18);
+                    pdf.setDrawColor(222, 222, 222);
+                    pdf.line(M, y, W - M, y);
+                    y += 5;
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(12);
+                    pdf.text(num + '. ' + title, M, y);
+                    pdf.setDrawColor(197, 220, 211);
+                    pdf.line(M, y + 1.5, W - M, y + 1.5);
+                    y += 7;
+                };
+
+                // ---------- HEADER BAND ----------
+                pdf.setFillColor(42, 62, 56);
+                pdf.rect(M, y, W - M * 2, 22, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(15);
+                pdf.text('MindBridge Clinical Summary Report', M + 6, y + 10);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(9);
+                pdf.text('Cognitive Baseline & Daily Caregiver Observation Synthesis', M + 6, y + 16);
+                pdf.setFontSize(8.5);
+                pdf.text('Report Date: ' + reportDate, W - M - 6, y + 9, { align: 'right' });
+                pdf.text('Status: Caregiver Logged', W - M - 6, y + 14, { align: 'right' });
+                y += 31;
+
+                // ---------- PATIENT DEMOGRAPHICS ----------
+                ensure(28);
+                const demY = y;
+                pdf.setFillColor(242, 247, 245);
+                pdf.setDrawColor(197, 220, 211);
+                pdf.roundedRect(M, demY, W - M * 2, 22, 2, 2, 'FD');
+                const colW = (W - M * 2) / 3;
+                const cell = function(x, label, value) {
+                    pdf.setTextColor(100, 116, 139);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(7.5);
+                    pdf.text(label.toUpperCase(), x + 4, demY + 8);
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.setFontSize(10.5);
+                    pdf.text(value, x + 4, demY + 15);
+                };
+                cell(M, 'Patient Name', P.name);
+                cell(M + colW, 'Age / Relation', P.age + ' yrs (' + P.rel + ')');
+                cell(M + colW * 2, 'Primary Caregiver', P.caregiver);
+                y = demY + 30;
+
+                // ---------- CAREGIVER FOCUS NOTE ----------
+                const noteInput = (document.getElementById('summaryCustomNoteInput') || {}).value || '';
+                if (noteInput.trim()) {
+                    const noteLines = pdf.splitTextToSize(clean(noteInput), W - M * 2 - 10);
+                    const noteH = 16 + noteLines.length * 4.5;
+                    ensure(noteH + 8);
+                    pdf.setFillColor(255, 251, 235);
+                    pdf.setDrawColor(253, 230, 138);
+                    pdf.roundedRect(M, y, W - M * 2, noteH, 2, 2, 'FD');
+                    pdf.setTextColor(120, 53, 15);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(8);
+                    pdf.text('CAREGIVER PRIORITY FOCUS / QUESTIONS FOR CLINICIAN', M + 5, y + 7);
+                    pdf.setTextColor(30, 41, 59);
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setFontSize(9);
+                    pdf.text(noteLines, M + 5, y + 13);
+                    y += noteH + 8;
+                }
+
+                // ---------- SECTION 1: M-ACE ----------
+                if (document.getElementById('summaryIncMace').checked) {
+                    sectionHeader(1, 'Cognitive Screening Baseline (M-ACE 30-Point Exercise)');
+                    const subs = [
+                        ['Orientation', document.getElementById('summaryScoreOrient').textContent],
+                        ['Verbal Fluency', document.getElementById('summaryScoreFluency').textContent],
+                        ['Clock Drawing', document.getElementById('summaryScoreClock').textContent],
+                        ['Delayed Recall', document.getElementById('summaryScoreRecall').textContent]
+                    ];
+                    ensure(30);
+                    const bw = (W - M * 2 - 12) / 4;
+                    const by = y;
+                    subs.forEach(function(s, i) {
+                        pdf.setFillColor(252, 251, 249);
+                        pdf.setDrawColor(239, 233, 221);
+                        pdf.roundedRect(M + i * (bw + 4), by, bw, 22, 2, 2, 'FD');
+                        pdf.setTextColor(100, 116, 139);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(7);
+                        pdf.text(s[0].toUpperCase(), M + i * (bw + 4) + 3, by + 8);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.setFontSize(13);
+                        pdf.text(s[1], M + i * (bw + 4) + 3, by + 16);
+                    });
+                    y = by + 28;
+
+                    pdf.setTextColor(19, 78, 74);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(9);
+                    pdf.text('M-ACE Total: ' + (document.getElementById('summaryTotalMaceBadge').textContent || '0 / 30'), M, y);
+                    y += 9;
+
+                    const interp = clean(document.getElementById('summaryMaceInterpretation').textContent);
+                    const interpLines = pdf.splitTextToSize(interp, W - M * 2 - 8);
+                    const interpH = 12 + interpLines.length * 4;
+                    ensure(interpH + 6);
+                    pdf.setFillColor(252, 251, 249);
+                    pdf.setDrawColor(239, 233, 221);
+                    pdf.roundedRect(M, y, W - M * 2, interpH, 2, 2, 'FD');
+                    pdf.setTextColor(51, 65, 85);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(8.5);
+                    pdf.text(interpLines, M + 4, y + 6);
+                    y += interpH + 8;
+                }
+
+                // ---------- SECTION 2: JOURNAL ----------
+                if (document.getElementById('summaryIncJournal').checked) {
+                    sectionHeader(2, 'Caregiver Daily Journal Highlights');
+                    const entries = liveJournalEntries || [];
+                    if (!entries.length) {
+                        pdf.setFont('helvetica', 'italic');
+                        pdf.setFontSize(9);
+                        pdf.setTextColor(148, 163, 184);
+                        pdf.text('No journal entries recorded yet.', M, y);
+                        y += 8;
+                    } else {
+                        entries.forEach(function(e, idx) {
+                            const head = clean(e.dateStr) + '  -  ' + clean(e.sentiment);
+                            const bodyLines = pdf.splitTextToSize(clean(e.content), W - M * 2 - 10);
+                            const entryH = 18 + bodyLines.length * 4.5;
+                            ensure(entryH + 4);
+                            pdf.setFillColor(idx % 2 ? 252 : 247, idx % 2 ? 251 : 244, idx % 2 ? 249 : 238);
+                            pdf.setDrawColor(239, 233, 221);
+                            pdf.roundedRect(M, y, W - M * 2, entryH, 2, 2, 'FD');
+                            pdf.setTextColor(30, 41, 59);
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setFontSize(8.5);
+                            pdf.text(head, M + 5, y + 7);
+                            pdf.setTextColor(51, 65, 85);
+                            pdf.setFont('helvetica', 'normal');
+                            pdf.setFontSize(8.5);
+                            pdf.text(bodyLines, M + 5, y + 13);
+                            y += entryH + 4;
+                        });
+                    }
+                }
+
+                // ---------- SECTION 3: SIGNATURE ----------
+                sectionHeader(3, 'Clinician Action & Signature');
+                ensure(44);
+                const sigY = y;
+                pdf.setDrawColor(148, 163, 184);
+                const halfW = (W - M * 2 - 8) / 2;
+                pdf.roundedRect(M, sigY, halfW, 26, 2, 2, 'S');
+                pdf.roundedRect(M + halfW + 8, sigY, halfW, 26, 2, 2, 'S');
+                pdf.setTextColor(100, 116, 139);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7);
+                pdf.text('PHYSICIAN CLINICAL IMPRESSION / NOTES', M + 4, sigY + 8);
+                pdf.text('FOLLOW-UP PLAN & NEXT APPOINTMENT', M + halfW + 12, sigY + 8);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(8);
+                pdf.text('(For physician use)', M + 4, sigY + 20);
+                pdf.text('(For physician use)', M + halfW + 12, sigY + 20);
+                y = sigY + 34;
+
+                pdf.setDrawColor(148, 163, 184);
+                pdf.line(W - M - 50, y, W - M, y);
+                pdf.setTextColor(100, 116, 139);
+                pdf.setFontSize(7.5);
+                pdf.text('Physician Signature & Date', W - M, y + 4, { align: 'right' });
+
+                // ---------- FOOTER + PAGE NUMBERS ----------
+                const foot = 'MindBridge Companion App - Patient Report. Non-diagnostic clinical synthesis aid. Intended to support patient-doctor communication.';
+                const totalPages = pdf.getNumberOfPages();
+                for (let i = 1; i <= totalPages; i++) {
+                    pdf.setPage(i);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(148, 163, 184);
+                    pdf.text(foot, M, H - 6);
+                    pdf.text('Page ' + i + ' of ' + totalPages, W - M, H - 6, { align: 'right' });
+                }
+
+                const safeName = String(currentUser.patientName || 'Patient').replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+                pdf.save('MindBridge_Clinical_Summary_' + safeName + '.pdf');
+            } catch (err) {
+                console.error('PDF generation failed:', err);
+                alert('Could not generate the PDF. Please use "Print via Browser" and choose "Save as PDF" instead.');
+            } finally {
+                busy(false);
+            }
+        };
+
+        window.closeSummaryModal = function() {
+            const modal = document.getElementById('doctorSummaryModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        };
+
+        // DOM INIT
+        document.addEventListener('DOMContentLoaded', () => {
+            const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const todayEl = document.getElementById('todayDateStr');
+            if (todayEl) todayEl.textContent = todayStr;
+        });
+    </script>
+</body>
+</html>
